@@ -1,9 +1,6 @@
 ##Apeel Sciences Prompt Sept 10th 2018
-import time
-import serial
+import time, datetime, io, json, uuid, requests, boto3, serial, os
 from serial.tools import list_ports
-import io
-import json
 from random import randint
 
 
@@ -37,20 +34,31 @@ class connector:
     def read_sensors(self):
         sample = {
             "image":"",
+            "timestamp":datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "humidity":randint(0,50),
             "actions":{},
-            "temp":randint(0,50)
+            "temp":randint(0,50),
+            "connected_devices":[device.hwid for device in list(self.connected)]
         }
 
-        sample["connected_devices"] = [device.hwid for device in list(self.connected)]
-
         sample = json.dumps(sample)
-        pass
 
+        return sample
+
+    #TODO: 1 Switch to environment variables 2 Upload File to Pre-Signed URL
+    ##
     def store_data(self):
-        pass
-    
-    
+        name = str(uuid.uuid4())
+
+        uri_duration = 2592000  # 30 days = 30 * 86400 seconds
+        access_key =  os.environ.get('AWS_KEY')
+        access_sig = os.environ.get('AWS_SIG')
+
+        s3_client = boto3.client('s3',aws_access_key_id=access_key, aws_secret_access_key=access_sig)
+
+        url = s3_client.generate_presigned_url('put_object', Params={'Bucket': 'apeel', 'Key': name+'.jpg'},ExpiresIn=uri_duration)
+
+        #
 ####################################
 
 def test_code():
@@ -58,9 +66,11 @@ def test_code():
     print conn.auth_list
 
     while True:
-        conn.check_serial_devices()
-        print conn.connected
-        time.sleep(0.5)
+        # conn.check_serial_devices()
+        # print conn.connected
+        conn.store_data()
+
+        time.sleep(5)
 
 test_code()
 
