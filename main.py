@@ -2,10 +2,13 @@
 import time, datetime, io, json, uuid, requests, boto3, serial, os
 from serial.tools import list_ports
 from random import randint
+from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
+
 
 
 class connector:
     def __init__(self):
+        self.mode = "both"
         self.auth_list = []
         self.connected = set()
 
@@ -33,7 +36,7 @@ class connector:
 
     def read_sensors(self):
         sample = {
-            "image":"",
+            "image":self.store_image(),
             "timestamp":datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "humidity":randint(0,50),
             "actions":{},
@@ -47,7 +50,7 @@ class connector:
 
     #TODO: 1 Switch to environment variables 2 Upload File to Pre-Signed URL
     ##
-    def store_data(self):
+    def store_image(self):
         name = str(uuid.uuid4())
 
         uri_duration = 2592000  # 30 days = 30 * 86400 seconds
@@ -58,22 +61,75 @@ class connector:
 
         url = s3_client.generate_presigned_url('put_object', Params={'Bucket': 'apeel', 'Key': name+'.jpg'},ExpiresIn=uri_duration)
 
-        #
+        return url
+
+    def callback(self, client, userdata, message):
+
+        print("Received a new message: ")
+        print(message.payload)
+        print("from topic: ")
+        print(message.topic)
+        print("--------------\n\n")
+
+
+
 ####################################
+host = 'a90y3e0ptmg5b.iot.us-east-2.amazonaws.com'
+rootCAPath = 'cert/root-CA.crt'
+certificatePath = 'cert/Vendor_Measurement-1.cert.pem'
+privateKeyPath = 'cert/Vendor_Measurement-1.private.key'
+port = 8883
+useWebsocket = False
+clientId = 'Apeel-Device-1'
+topic = '/sdk/test/Python'
 
 def test_code():
     conn = connector()
-    print conn.auth_list
 
+    # conn.read_sensors()
+    # Init AWSIoTMQTTClient
+    myAWSIoTMQTTClient = None
+    if useWebsocket:
+        myAWSIoTMQTTClient = AWSIoTMQTTClient(clientId, useWebsocket=True)
+        myAWSIoTMQTTClient.configureEndpoint(host, port)
+        myAWSIoTMQTTClient.configureCredentials(rootCAPath)
+    else:
+        myAWSIoTMQTTClient = AWSIoTMQTTClient(clientId)
+        myAWSIoTMQTTClient.configureEndpoint(host, port)
+        myAWSIoTMQTTClient.configureCredentials(rootCAPath, privateKeyPath, certificatePath)
+
+    # AWSIoTMQTTClient connection configuration
+    myAWSIoTMQTTClient.configureAutoReconnectBackoffTime(1, 32, 20)
+
+    myAWSIoTMQTTClient.configureOfflinePublishQueueing(-1)  # Infinite offline Publish queueing
+
+    #Used to configure the draining speed to clear up the queued requests when the connection is back.
+    myAWSIoTMQTTClient.configureDrainingFrequency(2)  # Draining: 2 Hz
+    myAWSIoTMQTTClient.configureConnectDisconnectTimeout(5)  # 10 sec
+    myAWSIoTMQTTClient.configureMQTTOperationTimeout(10)  # 5 sec
+
+    myAWSIoTMQTTClient.
+    # Connect and subscribe to AWS IoT
+    myAWSIoTMQTTClient.connect()
+
+    if conn.mode == 'both' or conn.mode == 'subscribe':
+        myAWSIoTMQTTClient.subscribe(topic, 1, conn.callback)
+
+    time.sleep(2)
+
+    # Publish to the same topic in a loop forever
+    loopCount = 0
     while True:
-        # conn.check_serial_devices()
-        # print conn.connected
-        conn.store_data()
-
-        time.sleep(5)
+        if conn.mode == 'both' or conn.mode == 'publish':
+            message = conn.read_sensors()
+            messageJson = message
+            #print message
+            myAWSIoTMQTTClient.publish(topic, messageJson, 1)
+            #print('Published topic %s: %s\n' % (topic, messageJson))
+            loopCount += 1
+        time.sleep(2)
 
 test_code()
 
 ####################################
-    
-    
+
