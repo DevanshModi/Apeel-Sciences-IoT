@@ -1,3 +1,12 @@
 {
-  "auth_list":-1
+  "auth_list":-1,
+  "host":"a90y3e0ptmg5b.iot.us-east-2.amazonaws.com",
+  "rootCAPath":"cert/root-CA.crt",
+  "certificatePath":"cert/Vendor_Measurement-1.cert.pem",
+  "privateKeyPath":"cert/Vendor_Measurement-1.private.key",
+  "port":8883,
+  "useWebsocket":false,
+  "clientId":"Apeel-Device-1",
+  "topic":"/sdk/test/Lab_sensors",
+  "topic_sub":"/sdk/test/Lab_actions"
 }
