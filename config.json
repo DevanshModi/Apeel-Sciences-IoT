@@ -6,7 +6,7 @@
   "privateKeyPath":"cert/Vendor_Measurement-1.private.key",
   "port":8883,
   "useWebsocket":false,
-  "clientId":"Apeel-Device-1",
-  "topic":"/sdk/test/Lab_sensors",
-  "topic_sub":"/sdk/test/Lab_actions"
+  "clientId":"Apeel-Device-2",
+  "topic":"/sdk/test/Lab_sensors/2",
+  "topic_sub":"/sdk/test/Lab_actions/2"
 }

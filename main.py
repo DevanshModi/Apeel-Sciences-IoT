@@ -56,8 +56,6 @@ class connector:
             "connected_devices":[device.hwid for device in list(self.connected)]
         }
 
-        sample = json.dumps(sample)
-
         return sample
 
     #TODO: 1 Switch to environment variables 2 Upload File to Pre-Signed URL
@@ -144,7 +142,8 @@ def run_instance():
         if conn.mode == 'both' or conn.mode == 'publish':
             try:
                 message = conn.read_sensors()
-                messageJson = message
+                message['clientId'] = conn.data["clientId"]
+                messageJson = json.loads(message)
 
                 # Add the current reading to database
                 ## For each row in db_rows, publish them first
